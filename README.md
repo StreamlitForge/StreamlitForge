@@ -11,7 +11,6 @@
 - 自动打包为跨平台智能启动包
 - 提供源代码下载
 - **一键部署到GitHub** - 将生成的应用自动部署到StreamlitForge组织
-- **自动配置GitHub Pages** - 为每个应用创建美观的展示页面
 - 支持自定义资源上传（图片、数据文件等）
 - 支持自定义OpenAI API密钥和端点
 
@@ -47,8 +46,8 @@ streamlit run app.py
 
 1. 在侧边栏的"GitHub部署配置"部分输入您的GitHub访问令牌
 2. 生成应用后，点击"部署到StreamlitForge组织"按钮
-3. 应用将自动部署到GitHub，并配置GitHub Pages
-4. 部署完成后，您可以通过提供的链接访问仓库和网站
+3. 应用将自动部署到GitHub仓库
+4. 部署完成后，您可以通过提供的链接访问仓库
 
 ## 系统要求
 
@@ -61,7 +60,6 @@ streamlit run app.py
 - 生成的可执行文件和源代码存储在临时目录中，应用重启后可能无法访问之前生成的文件
 - 复杂应用的生成可能需要更长时间和更多的API tokens
 - GitHub部署功能需要有效的访问令牌，且令牌需要有StreamlitForge组织的访问权限
-- GitHub Pages部署可能需要几分钟才能生效
 
 ## 贡献
 

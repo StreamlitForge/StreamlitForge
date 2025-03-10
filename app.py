@@ -354,17 +354,7 @@ with tab1:
                     if st.session_state.github_deployment.get("status") == "success":
                         # 已经成功部署
                         st.success(f"应用已成功部署到 GitHub: {st.session_state.github_deployment.get('url', '')}")
-                        
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.markdown(f"[查看仓库]({st.session_state.github_deployment.get('url', '')})")
-                        
-                        with col2:
-                            if st.session_state.github_deployment.get("pages_url"):
-                                st.markdown(f"[访问应用网站]({st.session_state.github_deployment.get('pages_url', '')})")
-                                st.info("GitHub Pages 部署可能需要几分钟才能生效")
-                            else:
-                                st.info("GitHub Pages 正在准备中，请稍后...")
+                        st.markdown(f"[查看仓库]({st.session_state.github_deployment.get('url', '')})")
                     else:
                         # 显示部署按钮
                         if st.button("部署到 StreamlitForge 组织", type="primary", use_container_width=True):
@@ -388,22 +378,11 @@ with tab1:
                                     st.session_state.github_deployment = {
                                         "status": "success",
                                         "url": deploy_result["repo_url"],
-                                        "repo_name": deploy_result["repo_name"],
-                                        "pages_url": deploy_result.get("pages_url", "")
+                                        "repo_name": deploy_result["repo_name"]
                                     }
                                     status.update(label=f"成功部署到 GitHub！", state="complete")
                                     st.success(f"应用已成功部署到 GitHub 组织 StreamlitForge")
-                                    
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        st.markdown(f"[查看仓库]({deploy_result['repo_url']})")
-                                    
-                                    with col2:
-                                        if deploy_result.get("pages_url"):
-                                            st.markdown(f"[访问应用网站]({deploy_result.get('pages_url', '')})")
-                                            st.info("GitHub Pages 部署可能需要几分钟才能生效")
-                                        else:
-                                            st.info("GitHub Pages 正在准备中，请稍后...")
+                                    st.markdown(f"[查看仓库]({deploy_result['repo_url']})")
                                 else:
                                     st.session_state.github_deployment = {
                                         "status": "failed",
@@ -578,8 +557,6 @@ with tab3:
                 # 显示 GitHub 部署状态（如果有）
                 if 'github_deployment' in app and app['github_deployment'].get('status') == 'success':
                     st.write(f"**GitHub 仓库**: [{app['github_deployment'].get('repo_name')}]({app['github_deployment'].get('url')})")
-                    if app['github_deployment'].get('pages_url'):
-                        st.write(f"**网站链接**: [{app['github_deployment'].get('repo_name')} 页面]({app['github_deployment'].get('pages_url')})")
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -698,219 +675,14 @@ def deploy_to_github(app_dir, app_name, github_token):
             req_upload_url = f"{api_url}/repos/StreamlitForge/{repo_name}/contents/requirements.txt"
             response = requests.put(req_upload_url, headers=headers, json=req_upload_data)
         
-        # 5. 创建GitHub Actions工作流来部署到Pages
-        update_progress("GitHub 部署", "配置 GitHub Pages 自动部署...", 95)
-        
-        # 创建GitHub Actions工作流目录
-        workflows_dir = ".github/workflows"
-        workflows_url = f"{api_url}/repos/StreamlitForge/{repo_name}/contents/{workflows_dir}"
-        
-        # 创建工作流目录
-        mkdir_data = {
-            "message": "创建工作流目录",
-            "content": base64.b64encode(b"").decode('utf-8'),
-            "path": ".github/workflows"
-        }
-        
-        try:
-            # 尝试创建.github目录
-            github_dir_url = f"{api_url}/repos/StreamlitForge/{repo_name}/contents/.github"
-            github_dir_data = {
-                "message": "创建.github目录",
-                "content": base64.b64encode(b"").decode('utf-8')
-            }
-            requests.put(github_dir_url, headers=headers, json=github_dir_data)
-        except:
-            pass  # 如果目录已存在，忽略错误
-        
-        # 创建工作流文件
-        streamlit_deploy_workflow = """name: 部署Streamlit应用到Pages
-
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: 设置Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: 安装依赖
-        run: |
-          python -m pip install --upgrade pip
-          pip install streamlit
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: 构建静态网站
-        run: |
-          mkdir -p _site
-          echo "title: Streamlit应用" > _site/_config.yml
-          cat > _site/index.html << EOL
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>${{github.event.repository.name}} - StreamlitForge</title>
-            <style>
-              body { 
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-                line-height: 1.6;
-                color: #333;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-              }
-              .container { 
-                background: #f8f9fa;
-                border-radius: 10px;
-                padding: 30px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-              }
-              h1 { color: #0066cc; margin-top: 0; }
-              .button {
-                display: inline-block;
-                background: #ff4b4b;
-                color: white;
-                padding: 12px 24px;
-                text-decoration: none;
-                border-radius: 5px;
-                font-weight: bold;
-                margin-top: 20px;
-              }
-              .button:hover { background: #e03e3e; }
-              .streamlit-logo {
-                width: 50px;
-                vertical-align: middle;
-                margin-right: 10px;
-              }
-              .footer {
-                margin-top: 40px;
-                font-size: 14px;
-                color: #666;
-                text-align: center;
-              }
-              code {
-                background: #eee;
-                padding: 3px 5px;
-                border-radius: 3px;
-              }
-              pre {
-                background: #f1f1f1;
-                padding: 15px;
-                border-radius: 5px;
-                overflow-x: auto;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <h1>
-                <img src="https://streamlit.io/images/brand/streamlit-mark-color.svg" class="streamlit-logo" alt="Streamlit logo">
-                ${{github.event.repository.name}}
-              </h1>
-              <p>这个Streamlit应用通过<a href="https://github.com/StreamlitForge">StreamlitForge</a>组织发布。</p>
-              
-              <h2>运行此应用</h2>
-              <p>要在您自己的计算机上运行此应用，请按照以下步骤操作：</p>
-              
-              <h3>方法1：使用GitHub Codespaces（推荐）</h3>
-              <p>点击下方按钮在GitHub Codespaces中打开项目：</p>
-              <a href="https://codespaces.new/${{github.repository}}" class="button">在Codespaces中打开</a>
-              
-              <h3>方法2：克隆仓库并本地运行</h3>
-              <p>1. 克隆仓库：</p>
-              <pre><code>git clone https://github.com/${{github.repository}}.git
-cd ${{github.event.repository.name}}</code></pre>
-              
-              <p>2. 安装依赖：</p>
-              <pre><code>pip install -r requirements.txt</code></pre>
-              
-              <p>3. 运行应用：</p>
-              <pre><code>streamlit run app.py</code></pre>
-              
-              <h2>源代码</h2>
-              <p>查看完整源代码：<a href="https://github.com/${{github.repository}}">GitHub仓库</a></p>
-            </div>
-            
-            <div class="footer">
-              由<a href="https://github.com/StreamlitForge">StreamlitForge</a>提供支持 | 使用<a href="https://streamlit.io">Streamlit</a>构建
-            </div>
-          </body>
-          </html>
-          EOL
-      - name: 上传项目构建
-        uses: actions/upload-pages-artifact@v1
-      
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: 部署到GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v2
-"""
-        
-        workflow_path = ".github/workflows/deploy-streamlit.yml"
-        workflow_data = {
-            "message": "添加Streamlit部署工作流",
-            "content": base64.b64encode(streamlit_deploy_workflow.encode('utf-8')).decode('utf-8')
-        }
-        
-        workflow_url = f"{api_url}/repos/StreamlitForge/{repo_name}/contents/{workflow_path}"
-        response = requests.put(workflow_url, headers=headers, json=workflow_data)
-        
-        if response.status_code not in [200, 201]:
-            return {"success": False, "error": f"创建工作流文件失败: {response.json().get('message', '未知错误')}"}
-        
-        # 6. 启用GitHub Pages
-        update_progress("GitHub 部署", "启用 GitHub Pages...", 98)
-        
-        # 获取默认分支
-        repo_details_url = f"{api_url}/repos/StreamlitForge/{repo_name}"
-        repo_details_response = requests.get(repo_details_url, headers=headers)
-        default_branch = repo_details_response.json().get("default_branch", "main")
-        
-        # 设置 GitHub Pages
-        pages_url = f"{api_url}/repos/StreamlitForge/{repo_name}/pages"
-        pages_data = {
-            "source": {
-                "branch": default_branch,
-                "path": "/"
-            }
-        }
-        
-        response = requests.post(pages_url, headers=headers, json=pages_data)
-        
-        # 获取Pages URL
-        pages_info_url = f"{api_url}/repos/StreamlitForge/{repo_name}/pages"
-        pages_info_response = requests.get(pages_info_url, headers=headers)
-        
-        pages_url = ""
-        if pages_info_response.status_code == 200:
-            pages_url = pages_info_response.json().get("html_url", "")
-        
         # 部署完成
-        update_progress("完成", "应用已成功部署到 GitHub Pages！", 100)
+        update_progress("完成", "应用已成功部署到 GitHub！", 100)
         
         return {
             "success": True, 
             "repo_url": repo_url,
             "repo_name": repo_name,
-            "org": "StreamlitForge",
-            "pages_url": pages_url
+            "org": "StreamlitForge"
         }
         
     except Exception as e:
